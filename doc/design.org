@@ -32,6 +32,8 @@ as an org-mode doc.
   If current value == default and an underlying app had just rolled out
   having the new default value - then current should be updated to the new default.
   TODO add marker if default is unchanged to affect the update? ^
+  
+  Setting should have a mark if a service should be restarted to apply it.
 *** Data types
 ***** String
 ***** Integer
