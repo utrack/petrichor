@@ -1,0 +1,41 @@
+While this doc can be rendered via Markdown - it is meant to be seen
+as an org-mode doc.
+
+
+* Outline
+  Each setting has its service (where the code that uses it is implemented)
+  and business feature that can be impacted via that setting.
+
+  Every setting has only one service, but it can be bound to 0..n biz features.
+* Types of entities
+** Service-based collections
+*** Stacks
+    Stack contains a bunch of services.
+*** Services
+    Service has all the settings provided by one real service.
+*** Modules
+    Service has 1..n modules describing different parts of a service.
+    For example: caching, search params, database access mode, etc.
+    Each module is a collection of settings.
+** Feature-based collections
+*** Domain
+    Domain describes the topmost level of a feature (Search, Processing, Display,
+    etc).
+*** Specialization
+    TODO make a better name
+*** Feature
+    Each feature is a collection of settings related to a business feature.
+* Setting
+  A setting is a single data value that can be of one or more types.
+  It has its default value and current value.
+
+  If current value == default and an underlying app had just rolled out
+  having the new default value - then current should be updated to the new default.
+  TODO add marker if default is unchanged to affect the update? ^
+*** Data types
+***** String
+***** Integer
+***** Duration
+***** Enum
+***** Boolean
+***** TODO YAML?
