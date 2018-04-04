@@ -8,40 +8,16 @@ const (
 	updateBufferCap = 5
 )
 
-// Valuer provides value updates from a provider.
-type Valuer interface {
-	ChanForValue(name string) <-chan string
-	Value(string) string
-}
-
 // NewBoolean creates new Boolean value using default Registerer and Valuer.
 func NewBoolean(name string, desc SettingDesc, def bool) *Boolean {
-	return NewBooleanV(name, desc, def, DefaultValuer)
+	return NewBooleanV(name, desc, def, defaultValuer)
 }
 
 // NewBooleanV creates new Boolean value using default Registerer and custom Valuer.
 func NewBooleanV(name string, desc SettingDesc, def bool, v Valuer) *Boolean {
 	info := newTypedDesc(name, def, TypeBoolean, desc)
-	DefaultRegisterer.MustRegister(info)
+	defaultRegisterer.MustRegister(info)
 	return initBooleanValue(def, v.ChanForValue(name))
-}
-
-// NewBooleanG returns a getter func that retrieves a boolean value from a given
-// Valuer.
-//
-// Returns last successfully retrieved value if Valuer returns garbage.
-func NewBooleanG(name string, desc SettingDesc, def bool) func(Valuer) bool {
-	info := newTypedDesc(name, def, TypeBoolean, desc)
-	DefaultRegisterer.MustRegister(info)
-
-	value := def
-	return func(v Valuer) bool {
-		newVal, err := parseBoolValue(v.Value(name))
-		if err == nil {
-			value = newVal
-		}
-		return value
-	}
 }
 
 func initBooleanValue(def bool, v <-chan string) *Boolean {

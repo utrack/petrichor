@@ -5,61 +5,64 @@ type Registerer interface {
 	Register(TypedSettingDesc) error
 	MustRegister(TypedSettingDesc)
 
+	Desc(name) *TypedSettingDesc
+
 	// TODO add module desc mapping id -> name etc, see design
 }
 
-// DefaultRegisterer is a default registry point for the created values.
-var DefaultRegisterer Registerer
+// defaultRegisterer is a default registry point for the created values.
+var defaultRegisterer Registerer = newDelayedRegisterer()
 
-// DefaultValuer is a default Valuer point for the created values.
-var DefaultValuer Valuer
-
-// SettingDesc fully describes some setting of an app.
-type SettingDesc struct {
-	// Tags are used to map this setting to business features' collection.
-	Tags []string
-	// Module is an ID or a name of the app's module that uses this setting.
-	Module string
-	// Description is this setting's description.
-	Description string
+// SetRegisterer sets the default registerer for values.
+// All previously registered values are relayed to the new one.
+// This function should only be called once.
+func SetRegisterer(r Registerer) {
+	defaultRegisterer.(*delayedRegisterer).Relay(r)
 }
 
-type NamedSettingDesc struct {
-	SettingDesc
-	Name string
+// delayedRegisterer is required to support values registering on init(), but
+// the registerer itself appearing at runtime
+type delayedRegisterer struct {
+	realR Registerer
+	settings map[string]TypedSettingDesc
+	mu sync.Mutex
 }
 
-type TypedSettingDesc struct {
-	NamedSettingDesc
-
-	Type         SettingDescType
-	DefaultValue interface{}
-
-	// TODO need value list for an enum
-}
-
-func newTypedDesc(
-	name string,
-	def interface{}, vType SettingDescType,
-	desc SettingDesc,
-) TypedSettingDesc {
-	return TypedSettingDesc{
-		Type:         vType,
-		DefaultValue: def,
-		NamedSettingDesc: NamedSettingDesc{
-			Name:        name,
-			SettingDesc: desc,
-		},
+func newDelayedRegisterer() *delayedRegisterer {
+	return &delayedRegisterer{
+		settings:map[string]TypedSettingDesc{},
 	}
 }
 
-// SettingDescType describes a type of a setting.
-type SettingDescType uint
+func (r *delayedRegisterer) Register(s TypedSettingDesc) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.realR != nil {
+		return r.realR.Register(s)
+	}
 
-const (
-	TypeString SettingDescType = iota
-	TypeBoolean
-	TypeInteger
-	TypeDuration
-	TypeEnum
-)
+	if _,ok := r.settings[s.Name];ok {
+		return errors.New("Setting of this name already exists!")
+	}
+	r.settings[s.Name] = s
+	return nil
+}
+
+func (r *delayedRegisterer) MustRegister(s TypedSettingDesc) {
+	if err := r.Register(s); err != nil {
+		panic(err)
+	}
+}
+
+func (r *delayedRegisterer) Relay(n Registerer) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.settings == nil || r.realR != nil {
+		panic("Relay called twice!")
+	}
+	for _,s := range r.settings {
+		n.MustRegister(s)
+	}
+	r.settings = nil
+	r.realR = n
+}
