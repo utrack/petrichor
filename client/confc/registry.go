@@ -1,11 +1,16 @@
 package confc
 
+import (
+	"errors"
+	"sync"
+)
+
 // Registerer publishes settings' info.
 type Registerer interface {
 	Register(TypedSettingDesc) error
 	MustRegister(TypedSettingDesc)
 
-	Desc(name) *TypedSettingDesc
+	Desc(name string) *TypedSettingDesc
 
 	// TODO add module desc mapping id -> name etc, see design
 }
@@ -23,14 +28,14 @@ func SetRegisterer(r Registerer) {
 // delayedRegisterer is required to support values registering on init(), but
 // the registerer itself appearing at runtime
 type delayedRegisterer struct {
-	realR Registerer
+	realR    Registerer
 	settings map[string]TypedSettingDesc
-	mu sync.Mutex
+	mu       sync.RWMutex
 }
 
 func newDelayedRegisterer() *delayedRegisterer {
 	return &delayedRegisterer{
-		settings:map[string]TypedSettingDesc{},
+		settings: map[string]TypedSettingDesc{},
 	}
 }
 
@@ -41,8 +46,8 @@ func (r *delayedRegisterer) Register(s TypedSettingDesc) error {
 		return r.realR.Register(s)
 	}
 
-	if _,ok := r.settings[s.Name];ok {
-		return errors.New("Setting of this name already exists!")
+	if _, ok := r.settings[s.Name]; ok {
+		return errors.New("setting of this name already exists")
 	}
 	r.settings[s.Name] = s
 	return nil
@@ -60,9 +65,22 @@ func (r *delayedRegisterer) Relay(n Registerer) {
 	if r.settings == nil || r.realR != nil {
 		panic("Relay called twice!")
 	}
-	for _,s := range r.settings {
+	for _, s := range r.settings {
 		n.MustRegister(s)
 	}
 	r.settings = nil
 	r.realR = n
+}
+
+func (r *delayedRegisterer) Desc(name string) *TypedSettingDesc {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.realR != nil {
+		return r.realR.Desc(name)
+	}
+	ret, ok := r.settings[name]
+	if !ok {
+		return nil
+	}
+	return &ret
 }
