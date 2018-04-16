@@ -8,10 +8,11 @@ import (
 )
 
 type Types struct {
-	F1 int           `json:field_int,description:"This is an int",tags:["tag1", "Tag2"],module:"module"`
-	f2 string        `json:field_string,description:"This is a string"`
-	F3 time.Duration `json:field_duration`
-	f4 float64       `json:field_float64`
+	F1 int           `json:"field_int" description:"This is an int" tags:"a, b, c, d, e" module:"module"`
+	f2 string        `json:"field_string" description:"This is a string"`
+	F3 time.Duration `json:"field_duration"`
+	f4 float64       `json:"field_float64"`
+	f5 bool          `json:"field_bool"`
 }
 
 func TestNilStruct(t *testing.T) {

@@ -40,12 +40,13 @@ func newTypedDesc(
 }
 
 // SettingDescType describes a type of a setting.
-type SettingDescType uint
+type SettingDescType string
 
 const (
-	TypeString SettingDescType = iota
-	TypeBoolean
-	TypeInteger
-	TypeDuration
-	TypeEnum
+	TypeString   SettingDescType = "string"
+	TypeBoolean  SettingDescType = "bool"
+	TypeInteger  SettingDescType = "int64"
+	TypeFloat    SettingDescType = "float64"
+	TypeDuration SettingDescType = "time.Duration"
+	TypeEnum     SettingDescType = "??"
 )
