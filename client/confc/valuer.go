@@ -6,11 +6,11 @@ import (
 
 // Valuer provides value updates from a provider.
 type Valuer interface {
-	ChanForValue(name string) <-chan string
+	ChanForValue(name string) chan string
 }
 
 // defaultValuer is a default Valuer point for the created values.
-var defaultValuer Valuer = newProxyValuer()
+var defaultValuer Valuer = NewProxyValuer()
 
 // SetValuer sets the default valuer.
 // All previously made ChanForValue()-made chans are chained and proxied
@@ -21,26 +21,28 @@ func SetValuer(v Valuer) {
 }
 
 type proxyValuer struct {
-	mu    sync.RWMutex
+	sync.RWMutex
+
 	realV Valuer
 
 	rcMu     sync.RWMutex
 	regChans map[string][]chan string
 }
 
-func newProxyValuer() *proxyValuer {
+func NewProxyValuer() *proxyValuer {
 	return &proxyValuer{
 		regChans: map[string][]chan string{},
 	}
 }
 
-func (p *proxyValuer) ChanForValue(name string) <-chan string {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+func (p *proxyValuer) ChanForValue(name string) chan string {
+	p.RLock()
+	defer p.RUnlock()
 
 	if p.realV != nil {
 		return p.realV.ChanForValue(name)
 	}
+
 	p.rcMu.Lock()
 	defer p.rcMu.Unlock()
 
@@ -51,8 +53,7 @@ func (p *proxyValuer) ChanForValue(name string) <-chan string {
 }
 
 func (p *proxyValuer) Proxy(v Valuer) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.Lock()
 
 	p.rcMu.Lock()
 	defer p.rcMu.Unlock()
@@ -62,6 +63,8 @@ func (p *proxyValuer) Proxy(v Valuer) {
 	}
 
 	p.realV = v
+
+	p.Unlock()
 
 	// proxy values from real chan to old fakes
 	for key := range p.regChans {

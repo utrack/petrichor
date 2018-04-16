@@ -4,25 +4,22 @@ import (
 	"strconv"
 )
 
-const (
-	updateBufferCap = 5
-)
-
 // NewBoolean creates new Boolean value using default Registerer and Valuer.
 func NewBoolean(name string, desc SettingDesc, def bool) *Boolean {
-	return NewBooleanV(name, desc, def, defaultValuer)
+	return NewBooleanV(name, desc, def, defaultRegisterer, defaultValuer)
 }
 
 // NewBooleanV creates new Boolean value using default Registerer and custom Valuer.
-func NewBooleanV(name string, desc SettingDesc, def bool, v Valuer) *Boolean {
+func NewBooleanV(name string, desc SettingDesc, def bool, r Registerer, v Valuer) *Boolean {
 	info := newTypedDesc(name, def, TypeBoolean, desc)
-	defaultRegisterer.MustRegister(info)
+	r.MustRegister(info)
 	return initBooleanValue(def, v.ChanForValue(name))
 }
 
-func initBooleanValue(def bool, v <-chan string) *Boolean {
+func initBooleanValue(def bool, v chan string) *Boolean {
 	ret := &Boolean{
 		v:          def,
+		updateChan: v,
 		outUpdates: []chan bool{},
 	}
 	go boolPump(ret, boolUpdateChan(v))
@@ -32,6 +29,7 @@ func initBooleanValue(def bool, v <-chan string) *Boolean {
 // Boolean provides a dynamic Boolean value.
 type Boolean struct {
 	v bool
+	updateChan chan string
 
 	// TODO make it thread safe
 	outUpdates []chan bool
@@ -40,6 +38,10 @@ type Boolean struct {
 // Value returns current value.
 func (b *Boolean) Value() bool {
 	return b.v
+}
+
+func (b *Boolean) UpdateChan() chan<- string {
+	return b.updateChan
 }
 
 // Updates creates a new channel pumping out this setting's updates.
