@@ -24,7 +24,7 @@ func TestBooleanUpdateViaChan(t *testing.T) {
 		t.Error("Expected false from chan, got true")
 	}
 
-	if  A.Value() != false {
+	if A.Value() != false {
 		t.Error("Expected false from Value, got true")
 	}
 }

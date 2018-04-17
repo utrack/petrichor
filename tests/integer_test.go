@@ -1,7 +1,6 @@
 package tests
 
-import
-(
+import (
 	"testing"
 
 	p "github.com/utrack/petrichor/client/confc"
@@ -26,7 +25,7 @@ func TestIntegerUpdateViaChan(t *testing.T) {
 		t.Error("Expected 24 from chan, got ", v)
 	}
 
-	if  A.Value() != 24 {
+	if A.Value() != 24 {
 		t.Error("Expected 24 from Value, got ", v)
 	}
 }
