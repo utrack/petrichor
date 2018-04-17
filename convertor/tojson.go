@@ -2,19 +2,21 @@ package convertor
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"reflect"
-	"testing"
+	"strings"
 
 	"github.com/utrack/petrichor/client/confc"
-	"fmt"
 )
 
-var goTypeToConfc = map[string]confc.SettingDescType{
-	"bool":          confc.TypeBoolean,
-	"string":        confc.TypeString,
-	"int":           confc.TypeInteger,
-	"float64":       confc.TypeFloat,
-	"time.Duration": confc.TypeDuration,
+var goTypeToConfc = map[reflect.Kind]confc.SettingDescType{
+	reflect.Bool:    confc.TypeBoolean,
+	reflect.String:  confc.TypeString,
+	reflect.Int:     confc.TypeInteger,
+	reflect.Int64:   confc.TypeDuration,
+	reflect.Float64: confc.TypeFloat,
+	reflect.Slice:   confc.TypeEnum,
 }
 
 type toJson confc.TypedSettingDesc
@@ -28,7 +30,7 @@ func parseTypedSettingsDesc(obj interface{}, m map[string]reflect.Kind) map[stri
 	for i := 0; i < fieldsCount; i++ {
 		kind := valType.Field(i).Type.Kind()
 		if kind != reflect.Struct {
-			m[valType.Field(i).Name] = kind
+			m[strings.ToLower(valType.Field(i).Name)] = kind
 		} else {
 			parseTypedSettingsDesc(val.Field(i).Interface(), m)
 		}
@@ -39,33 +41,45 @@ func parseTypedSettingsDesc(obj interface{}, m map[string]reflect.Kind) map[stri
 var tagsMap map[string]reflect.Kind
 
 func init() {
-	tagsMap = parseTypedSettingsDesc(Json, make(map[string]reflect.Kind))
+	tagsMap = parseTypedSettingsDesc(confc.SettingDesc{}, make(map[string]reflect.Kind))
 	tagsMap["json"] = reflect.String
 }
 
-func (j toJson) Convert(obj interface{}) ([]byte, error) {
-	return nil, nil
+func (j *toJson) addTags(fieldTags reflect.StructTag) {
+	for tagMaybe := range tagsMap {
+		if tag, ok := fieldTags.Lookup(tagMaybe); ok {
+			switch tagMaybe {
+			case "json":
+				j.Name = tag
+			case "tags":
+				j.Tags = strings.Split(tag, ",")
+			case "module":
+				j.Module = tag
+			case "description":
+				j.Description = tag
+			}
+		}
+	}
 }
 
-func (j toJson) C(t *testing.T, obj interface{}) ([]byte, error) {
-	t.Log(tagsMap)
-	toJsonSlice := make([]toJson, 0)
+func (j toJson) Convert(obj interface{}) ([]byte, error) {
 	val := reflect.Indirect(reflect.ValueOf(obj))
+	if !val.IsValid() {
+		return nil, errors.New("input object is nil")
+	}
 	valType := val.Type()
 	fieldsCount := val.NumField()
+	toJsonSlice := make([]toJson, 0)
 	for i := 0; i < fieldsCount; i++ {
-		c := toJson{}
-		t.Log(valType.Field(i).Name, valType.Field(i).Type, valType.Field(i).Tag, val.Field(i).Kind())
-		// ==== > to be continued
-		//v, ok := valType.Field(i).Tag.Lookup("tags")
-		//t.Log(v, ok)
-		confcType, ok := goTypeToConfc[valType.Field(i).Type.String()]
+		confcType, ok := goTypeToConfc[valType.Field(i).Type.Kind()]
 		if !ok {
 			return nil, fmt.Errorf("unsupported type: %v", valType.Field(i).Type.String())
 		}
+		c := toJson{}
 		c.Name = valType.Field(i).Name
 		c.Type = confcType
 		c.DefaultValue = reflect.Zero(val.Field(i).Type()).Interface()
+		c.addTags(valType.Field(i).Tag)
 		toJsonSlice = append(toJsonSlice, c)
 	}
 	return json.Marshal(toJsonSlice)

@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"time"
 	"testing"
+	"time"
 
 	"github.com/utrack/petrichor/convertor"
 )
@@ -13,14 +13,16 @@ type Types struct {
 	F3 time.Duration `json:"field_duration"`
 	f4 float64       `json:"field_float64"`
 	f5 bool          `json:"field_bool"`
+	f6 []string      `json:"field_strings_enum"`
+	F7 []int         `json:"field_int_enum"`
 }
 
 func TestNilStruct(t *testing.T) {
-	j, err := convertor.Json.C(t, nil)
-	if err != nil {
-		t.Error(err)
+	_, err := convertor.Json.Convert(nil)
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
-	t.Log(j)
+	t.Log(err)
 }
 
 func TestReflectStruct(t *testing.T) {
@@ -30,7 +32,7 @@ func TestReflectStruct(t *testing.T) {
 		F3: time.Hour,
 		f4: 2.71,
 	}
-	j, err := convertor.Json.C(t, types)
+	j, err := convertor.Json.Convert(types)
 	if err != nil {
 		t.Error(err)
 	}

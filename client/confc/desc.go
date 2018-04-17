@@ -45,8 +45,8 @@ type SettingDescType string
 const (
 	TypeString   SettingDescType = "string"
 	TypeBoolean  SettingDescType = "bool"
-	TypeInteger  SettingDescType = "int64"
+	TypeInteger  SettingDescType = "int"
 	TypeFloat    SettingDescType = "float64"
-	TypeDuration SettingDescType = "time.Duration"
-	TypeEnum     SettingDescType = "??"
+	TypeDuration SettingDescType = "duration"
+	TypeEnum     SettingDescType = "enum"
 )
